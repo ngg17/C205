@@ -1,16 +1,44 @@
 import socket
 from  threading import Thread
+import time
 
 SERVER = None
 PORT = None
 IP_ADDRESS = None
 
 CLIENTS = {}
-
-
+playerNames = []
 
 def handleClient(player_socket,player_name):
-    pass
+    global CLIENTS
+    global playerNames
+
+    # Sending Initial message
+    playerType =CLIENTS[player_name]["player_type"]
+    if(playerType== 'player1'):
+        CLIENTS[player_name]['turn'] = True
+        player_socket.send(str({'player_type' : CLIENTS[player_name]["player_type"] , 'turn': CLIENTS[player_name]['turn'] }).encode())
+    else:
+        CLIENTS[player_name]['turn'] = False
+        player_socket.send(str({'player_type' : CLIENTS[player_name]["player_type"] , 'turn': CLIENTS[player_name]['turn'] }).encode())
+
+    playerNames.append({"name": player_name, "type": CLIENTS[player_name]["player_type"]})
+
+    time.sleep(2)
+    if(len(playerNames) > 0 and len(playerNames) <= 2):
+        for cName in CLIENTS:
+            cSocket = CLIENTS[cName]["player_socket"]
+            cSocket.send(str({"player_names" : playerNames}).encode())
+
+    while True:
+        try:
+            message = player_socket.recv(2048)
+            if(message):
+                for cName in CLIENTS:
+                    cSocket = CLIENTS[cName]["player_socket"]
+                    cSocket.send(message)
+        except:
+            pass
 
 
 
@@ -36,11 +64,8 @@ def acceptConnections():
 
         print(f"Connection established with {player_name} : {addr}")
 
-
-       
         thread = Thread(target = handleClient, args=(player_socket,player_name,))
         thread.start()
-        
 
 
 
@@ -54,7 +79,7 @@ def setup():
     global IP_ADDRESS
 
     IP_ADDRESS = '127.0.0.1'
-    PORT = 6000
+    PORT = 8000
     SERVER = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     SERVER.bind((IP_ADDRESS, PORT))
 
